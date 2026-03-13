@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Rad van Fortuin</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', Arial, sans-serif;
+    background: #1a1008;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 30px 16px;
+    overflow-x: hidden;
+  }
+
+  /* Background stars */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle, #fff 1px, transparent 1px),
+      radial-gradient(circle, #fff 1px, transparent 1px);
+    background-size: 80px 80px, 120px 120px;
+    background-position: 0 0, 40px 40px;
+    opacity: 0.06;
+    pointer-events: none;
+  }
+
+  h1 {
+    font-family: 'Arial Black', 'Arial Bold', Arial, sans-serif;
+    font-weight: 900;
+    font-style: normal;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    letter-spacing: 2px;
+    color: #ff6a00;
+    text-shadow: 3px 3px 0 #7a3000, 0 0 30px rgba(255,106,0,0.4);
+  }
+
+  .wheel-wrap {
+    position: relative;
+    width: 420px;
+    height: 420px;
+    filter: drop-shadow(0 8px 40px rgba(255,100,0,0.35));
+  }
+
+  canvas {
+    border-radius: 50%;
+    display: block;
+  }
+
+  /* Pointer arrow */
+  .pointer {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-top: 36px solid #ff6a00;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+    z-index: 10;
+  }
+
+  /* Center hub */
+  .hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 52px;
+    height: 52px;
+    background: radial-gradient(circle at 35% 35%, #ffb347, #ff6a00 70%, #c44a00);
+    border-radius: 50%;
+    border: 4px solid #111;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.6);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Nunito', Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    color: #111;
+    user-select: none;
+  }
+
+  .horn-wrap {
+    position: absolute;
+    right: -110px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .horn-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
+    transition: transform 0.08s;
+  }
+  .horn-btn:hover { transform: scale(1.08); }
+  .horn-btn:active { transform: scale(0.93) rotate(-5deg); }
+  .horn-btn svg { display: block; }
+  .horn-label {
+    font-family: 'Nunito', Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+
+  button {
+    font-family: 'Arial Black', 'Arial Bold', Arial, sans-serif;
+    font-weight: 900;
+    font-style: normal;
+    letter-spacing: 1px;
+    font-size: 1.2rem;
+    padding: 14px 44px;
+    background: #ff6a00;
+    color: #111;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,106,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  button:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,106,0,0.6); }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  #result {
+    font-family: 'Arial Black', 'Arial Bold', Arial, sans-serif;
+    font-weight: 900;
+    font-style: normal;
+    font-size: clamp(1.4rem, 4vw, 2.2rem);
+    letter-spacing: 2px;
+    color: #ff6a00;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid #ff6a00;
+    border-radius: 16px;
+    padding: 16px 32px;
+    min-width: 280px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s;
+  }
+  #result.show {
+    background: rgba(255,106,0,0.12);
+    border-color: #ff6a00;
+    color: #ff6a00;
+    text-shadow: 0 0 20px rgba(255,106,0,0.4);
+  }
+</style>
+</head>
+<body>
+
+<h1>HET HL RAD</h1>
+
+<div class="wheel-wrap">
+  <canvas id="wheelCanvas" width="420" height="420"></canvas>
+  <div class="pointer"></div>
+  <div class="hub">HL</div>
+  <div class="horn-wrap">
+    <button class="horn-btn" onclick="honk()" title="Toet toet!">
+      <svg width="90" height="90" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Bicycle bell body -->
+        <!-- Dome top -->
+        <ellipse cx="45" cy="38" rx="22" ry="20" fill="#ff6a00" stroke="#111" stroke-width="2.5"/>
+        <!-- Shiny highlight on dome -->
+        <ellipse cx="38" cy="30" rx="7" ry="5" fill="rgba(255,255,255,0.22)" transform="rotate(-20 38 30)"/>
+        <!-- Bell base band -->
+        <rect x="23" y="52" width="44" height="9" rx="4" fill="#cc4400" stroke="#111" stroke-width="2"/>
+        <!-- Clapper / striker button on top -->
+        <circle cx="45" cy="24" r="5" fill="#111" stroke="#ff6a00" stroke-width="2"/>
+        <circle cx="45" cy="24" r="2.5" fill="#ff6a00"/>
+        <!-- Mount arm -->
+        <rect x="41" y="58" width="8" height="14" rx="3" fill="#888" stroke="#111" stroke-width="1.5"/>
+        <!-- Mount screw line -->
+        <line x1="45" y1="60" x2="45" y2="70" stroke="#555" stroke-width="1.5"/>
+        <!-- Sound waves -->
+        <g id="soundWaves" opacity="0">
+          <path d="M70 30 Q78 38 70 48" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M76 24 Q87 37 76 52" stroke="#FFD700" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.55"/>
+        </g>
+      </svg>
+    </button>
+    <span class="horn-label">Claxoneer</span>
+  </div>
+</div>
+
+<button id="spinBtn" onclick="spin()">DRAAIEN (VIER!)</button>
+<div id="result"></div>
+
+<script>
+const items = [
+  "4 Bier Kwartier","SG uitdelen","Bak met sjaarsch","Alfabet achterstevoren",
+  "Trek 'n bak","Potje opus","30 min geen WC","Theelepel chilipoeder",
+  "Bierkanon","Magnetronbak","Spies uitdelen","Any naar keuze",
+  "Shot","1u handboeien","1:11 planken","Shot uitdelen",
+  "Bierkanon uitdelen","SG","Draai opnieuw","Hap ui",
+  "Koprol+spies","Ijsspies","Hele GR bak","Ober 1u"
+];
+
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const cx = canvas.width / 2;
+const cy = canvas.height / 2;
+const radius = cx - 6;
+
+// Alternating black and orange
+const segColors = ['#111111', '#ff6a00'];
+const textColors = ['#ffffff', '#111111'];
+
+let currentRotation = 0;
+let isSpinning = false;
+
+function drawWheel(rotation) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const sliceAngle = (2 * Math.PI) / items.length;
+
+  items.forEach((item, i) => {
+    const startAngle = rotation + i * sliceAngle;
+    const endAngle = startAngle + sliceAngle;
+    const midAngle = startAngle + sliceAngle / 2;
+
+    // Draw segment
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = segColors[i % 2];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Draw text
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(midAngle);
+
+    // Auto-size font
+    const maxTextWidth = radius * 0.72;
+    let fontSize = 13;
+    ctx.font = `bold ${fontSize}px Nunito, Arial`;
+    while (ctx.measureText(item).width > maxTextWidth && fontSize > 7) {
+      fontSize -= 0.5;
+      ctx.font = `bold ${fontSize}px Nunito, Arial`;
+    }
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    const textX = radius - 14;
+    const color = textColors[i % 2];
+
+    // Subtle outline for legibility
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(item, textX, 0);
+
+    ctx.fillStyle = color;
+    ctx.fillText(item, textX, 0);
+
+    ctx.restore();
+  });
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 10;
+  ctx.stroke();
+}
+
+// Initial draw (pointer points right = 0 rad)
+drawWheel(currentRotation);
+
+let animationId;
+let startTime, startAngle, totalAngle, duration;
+
+function easeOut(t) {
+  return 1 - Math.pow(1 - t, 4);
+}
+
+// --- Rattle / tick sound ---
+let lastTickAngle = 0;
+const sliceAngleForTick = (2 * Math.PI) / items.length;
+
+function playTick(speed) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const g = audioCtx.createGain();
+  g.connect(audioCtx.destination);
+
+  // Short noise burst — like a pin flicking a peg
+  const bufSize = audioCtx.sampleRate * 0.04;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1);
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buf;
+
+  // Band-pass filter to give it a woody "clack" tone
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 900 + Math.random() * 200;
+  filter.Q.value = 3;
+
+  noise.connect(filter);
+  filter.connect(g);
+
+  // Volume and pitch scale with speed — fast = quiet rapid ticks, slow = loud clunks
+  const vol = Math.min(0.9, 0.2 + speed * 1.2);
+  const now = audioCtx.currentTime;
+  g.gain.setValueAtTime(vol, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.06 + speed * 0.08);
+
+  noise.start(now);
+  noise.stop(now + 0.12);
+}
+
+function animate(ts) {
+  if (!startTime) startTime = ts;
+  const elapsed = ts - startTime;
+  const progress = Math.min(elapsed / duration, 1);
+  const easedProgress = easeOut(progress);
+  const angle = startAngle + totalAngle * easedProgress;
+
+  // Detect segment boundary crossings for rattle
+  const ticksPassed = Math.floor(angle / sliceAngleForTick);
+  const lastTicksPassed = Math.floor(lastTickAngle / sliceAngleForTick);
+  if (ticksPassed > lastTicksPassed && progress > 0.01) {
+    // Angular speed: derivative of easeOut * totalAngle / duration
+    const t = progress;
+    const speed = (4 * Math.pow(1 - t, 3) * totalAngle) / duration;
+    const normalizedSpeed = Math.min(1, speed / 15);
+    playTick(normalizedSpeed);
+  }
+  lastTickAngle = angle;
+
+  drawWheel(angle);
+
+  if (progress < 1) {
+    animationId = requestAnimationFrame(animate);
+  } else {
+    currentRotation = angle % (2 * Math.PI);
+    isSpinning = false;
+    document.getElementById('spinBtn').disabled = false;
+    // Show result
+    const resultEl = document.getElementById('result');
+    resultEl.classList.add('show');
+  }
+}
+
+function spin() {
+  if (isSpinning) return;
+  isSpinning = true;
+  document.getElementById('spinBtn').disabled = true;
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('result').textContent = '...';
+
+  const winIndex = Math.floor(Math.random() * items.length);
+  const sliceAngle = (2 * Math.PI) / items.length;
+
+  // Pointer is at the TOP (12 o'clock = -π/2 radians)
+  // We want midAngle of winner to land at -π/2
+  // midAngle = finalRotation + winIndex*sliceAngle + sliceAngle/2 = -π/2 + 2π*k
+  // So finalRotation = -π/2 - winIndex*sliceAngle - sliceAngle/2
+
+  const extraSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full rotations
+  const targetRotation = (2 * Math.PI * extraSpins) - (Math.PI / 2) - (winIndex * sliceAngle) - sliceAngle / 2;
+
+  startTime = null;
+  startAngle = currentRotation;
+  lastTickAngle = currentRotation;
+  totalAngle = targetRotation + (2 * Math.PI * Math.ceil(-currentRotation / (2 * Math.PI)));
+  // Ensure we always spin forward a lot
+  if (totalAngle < 2 * Math.PI * 4) totalAngle += 2 * Math.PI * 5;
+
+  duration = 4500;
+
+  // Update result after spin
+  setTimeout(() => {
+    document.getElementById('result').textContent = items[winIndex];
+  }, duration);
+
+  animationId = requestAnimationFrame(animate);
+}
+
+
+// =========================================================
+
+// =========================================================
+// CUSTOM HORN SOUND
+// To use your own audio file, replace null below with the
+// path or URL to your file, e.g.: 'sounds/horn.mp3'
+// =========================================================
+const CUSTOM_HORN_FILE = null;
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let hornBuffer = null;
+
+if (CUSTOM_HORN_FILE) {
+  fetch(CUSTOM_HORN_FILE)
+    .then(r => r.arrayBuffer())
+    .then(buf => audioCtx.decodeAudioData(buf, decoded => { hornBuffer = decoded; }));
+}
+
+function honk() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  // Animate sound waves
+  const waves = document.getElementById('soundWaves');
+  waves.style.opacity = '1';
+  waves.style.transition = 'opacity 0.05s';
+  setTimeout(() => { waves.style.transition = 'opacity 0.5s'; waves.style.opacity = '0'; }, 300);
+
+  // Play custom file if loaded
+  if (hornBuffer) {
+    const source = audioCtx.createBufferSource();
+    source.buffer = hornBuffer;
+    source.connect(audioCtx.destination);
+    source.start(0);
+    return;
+  }
+
+  // Synthesized horn fallback
+  const masterGain = audioCtx.createGain();
+  masterGain.connect(audioCtx.destination);
+  const waveshaper = audioCtx.createWaveShaper();
+  const curve = new Float32Array(256);
+  for (let i = 0; i < 256; i++) {
+    const x = (i * 2) / 256 - 1;
+    curve[i] = (Math.PI + 80) * x / (Math.PI + 80 * Math.abs(x));
+  }
+  waveshaper.curve = curve;
+  waveshaper.connect(masterGain);
+  const now = audioCtx.currentTime;
+  const osc1 = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
+  const g1 = audioCtx.createGain();
+  const g2 = audioCtx.createGain();
+  osc1.connect(g1); g1.connect(waveshaper);
+  osc2.connect(g2); g2.connect(waveshaper);
+  osc1.type = 'sawtooth'; osc2.type = 'square';
+  osc1.frequency.setValueAtTime(380, now);
+  osc1.frequency.linearRampToValueAtTime(280, now + 0.08);
+  osc1.frequency.linearRampToValueAtTime(320, now + 0.2);
+  osc1.frequency.linearRampToValueAtTime(260, now + 0.45);
+  osc2.frequency.setValueAtTime(190, now);
+  osc2.frequency.linearRampToValueAtTime(140, now + 0.08);
+  osc2.frequency.linearRampToValueAtTime(160, now + 0.2);
+  osc2.frequency.linearRampToValueAtTime(130, now + 0.45);
+  g1.gain.setValueAtTime(0, now); g1.gain.linearRampToValueAtTime(0.5, now + 0.015);
+  g1.gain.setValueAtTime(0.5, now + 0.25); g1.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+  g2.gain.setValueAtTime(0, now); g2.gain.linearRampToValueAtTime(0.25, now + 0.015);
+  g2.gain.setValueAtTime(0.25, now + 0.25); g2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+  masterGain.gain.setValueAtTime(0.7, now);
+  osc1.start(now); osc1.stop(now + 0.6);
+  osc2.start(now); osc2.stop(now + 0.6);
+}
+
+</script>
+</body>
+</html>
