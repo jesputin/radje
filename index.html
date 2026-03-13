@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rad van Fortuin</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
 <style>
@@ -46,14 +47,16 @@
 
   .wheel-wrap {
     position: relative;
-    width: 420px;
-    height: 420px;
+    width: min(88vw, 88vh, 520px);
+    height: min(88vw, 88vh, 520px);
     filter: drop-shadow(0 8px 40px rgba(255,100,0,0.35));
   }
 
   canvas {
     border-radius: 50%;
     display: block;
+    width: 100%;
+    height: 100%;
   }
 
   /* Pointer arrow */
@@ -172,7 +175,7 @@
 </head>
 <body>
 
-<h1>HET HL RAD</h1>
+<h1>🎡 HL Radje draaien</h1>
 
 <div class="wheel-wrap">
   <canvas id="wheelCanvas" width="420" height="420"></canvas>
@@ -202,7 +205,7 @@
         </g>
       </svg>
     </button>
-    <span class="horn-label">Claxoneer</span>
+    <span class="horn-label">Toet!</span>
   </div>
 </div>
 
@@ -363,10 +366,9 @@ function animate(ts) {
   if (progress < 1) {
     animationId = requestAnimationFrame(animate);
   } else {
-    currentRotation = angle % (2 * Math.PI);
+    currentRotation = startAngle + totalAngle; // keep full cumulative angle
     isSpinning = false;
     document.getElementById('spinBtn').disabled = false;
-    // Show result
     const resultEl = document.getElementById('result');
     resultEl.classList.add('show');
   }
@@ -387,21 +389,25 @@ function spin() {
   // midAngle = finalRotation + winIndex*sliceAngle + sliceAngle/2 = -π/2 + 2π*k
   // So finalRotation = -π/2 - winIndex*sliceAngle - sliceAngle/2
 
-  const extraSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full rotations
-  const targetRotation = (2 * Math.PI * extraSpins) - (Math.PI / 2) - (winIndex * sliceAngle) - sliceAngle / 2;
+  const extraSpins = 5 + Math.floor(Math.random() * 3);
+  // Work out where we need to end up in absolute angle space
+  // Pin is at top (-π/2). We want: finalAngle + winIndex*sliceAngle + sliceAngle/2 ≡ -π/2 (mod 2π)
+  // So: finalAngle ≡ -π/2 - winIndex*sliceAngle - sliceAngle/2 (mod 2π)
+  const targetModulo = ((-Math.PI / 2) - (winIndex * sliceAngle) - sliceAngle / 2) % (2 * Math.PI);
+  const normalizedCurrent = currentRotation % (2 * Math.PI);
+  let delta = ((targetModulo - normalizedCurrent) % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
+  if (delta < 0.01) delta += 2 * Math.PI; // avoid landing exactly on boundary
+  totalAngle = extraSpins * 2 * Math.PI + delta;
 
   startTime = null;
   startAngle = currentRotation;
   lastTickAngle = currentRotation;
-  totalAngle = targetRotation + (2 * Math.PI * Math.ceil(-currentRotation / (2 * Math.PI)));
-  // Ensure we always spin forward a lot
-  if (totalAngle < 2 * Math.PI * 4) totalAngle += 2 * Math.PI * 5;
 
   duration = 4500;
 
   // Update result after spin
   setTimeout(() => {
-    document.getElementById('result').textContent = items[winIndex];
+    document.getElementById('result').textContent = '🏆 ' + items[winIndex];
   }, duration);
 
   animationId = requestAnimationFrame(animate);
