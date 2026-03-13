@@ -175,7 +175,7 @@
 </head>
 <body>
 
-<h1>🎡 HL Radje draaien</h1>
+<h1>HL Radje draaien</h1>
 
 <div class="wheel-wrap">
   <canvas id="wheelCanvas" width="420" height="420"></canvas>
@@ -407,7 +407,7 @@ function spin() {
 
   // Update result after spin
   setTimeout(() => {
-    document.getElementById('result').textContent = '🏆 ' + items[winIndex];
+    document.getElementById('result').textContent =items[winIndex];
   }, duration);
 
   animationId = requestAnimationFrame(animate);
